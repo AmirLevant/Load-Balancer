@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
-	"time"
 )
 
 func main() {
@@ -35,19 +36,19 @@ func handleConnection(conn net.Conn) {
 	// always close the connection at the end
 	defer conn.Close()
 
-	// prevent zombie connections
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-	buffer := make([]byte, 1024)
+	reader := bufio.NewReader(conn)
 
 	for {
-		n, err := conn.Read(buffer)
+		message, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Error while Reading:", err)
+			if err != io.EOF {
+				fmt.Println("Error reading:", err)
+			}
 			return
 		}
-		fmt.Printf("Recieved: %s", buffer[:n])
-		conn.Write([]byte("Message received \n"))
+
+		fmt.Printf("Message Recieved: %s", message)
+
 	}
 
 }
