@@ -1,0 +1,11 @@
+[loadbalancer]
+port = 8080
+
+[[servers]]
+port = 9090
+
+[[servers]]
+port = 9091
+
+[[servers]]
+port = 9092

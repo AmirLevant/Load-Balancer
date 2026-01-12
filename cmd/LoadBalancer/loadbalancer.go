@@ -4,23 +4,41 @@ import (
 	"fmt"
 	"log"
 	"net"
+
+	"github.com/burntsushi/toml"
 )
+
+type Config struct {
+	loadBalancer struct {
+		Port int `toml: "port"`
+	} `toml:"loadbalancer"`
+	Servers []struct {
+		Port int `toml: "port"`
+	} `toml:"servers"`
+}
 
 func main() {
 
-	// load balancer runs on 8080
-	listener, err := net.Listen("tcp", ":8080")
+	var cnfg Config
+	if _, err := toml.DecodeFile("config.toml", &cnfg); err != nil {
+		log.Fatalf("Error reading config: %v", err)
+	}
+
+	// take load balancer port from config, 8080
+	// listen on port
+	loadBalancerPort := fmt.Sprintf(":%d", cnfg.loadBalancer.Port)
+	ClientListener, err := net.Listen("tcp", loadBalancerPort)
 
 	if err != nil {
 		fmt.Printf("Error listening: %s", err)
 	}
 
-	defer listener.Close()
+	defer ClientListener.Close()
 
 	fmt.Println("Load Balancer running on port :8080")
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := ClientListener.Accept()
 		if err != nil {
 			fmt.Printf("Error Accepting: %s", err)
 			continue
