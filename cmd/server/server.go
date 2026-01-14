@@ -1,17 +1,15 @@
-package main
+package server
 
 import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 )
 
-func main() {
-	argPort := os.Args[1]
+func StartServer(port string) {
 
 	// we listen on port 8080
-	listener, err := net.Listen("tcp", ":"+argPort)
+	listener, err := net.Listen("tcp", ":"+port)
 
 	if err != nil {
 		fmt.Println("Error listening:", err)
@@ -20,7 +18,7 @@ func main() {
 
 	defer listener.Close()
 
-	fmt.Println("Server running on port :" + argPort)
+	fmt.Println("Server running on port :" + port)
 
 	for {
 		conn, err := listener.Accept()
@@ -28,19 +26,14 @@ func main() {
 			fmt.Println("Error Accepting:", err)
 			continue
 		}
-		go handleConnection(conn)
+		fmt.Println("server " + port + " has recieved a message")
+		go HandleConnection(conn)
 	}
-
 }
 
-func handleConnection(conn net.Conn) {
+func HandleConnection(conn net.Conn) {
 	// always close the connection at the end
 	defer conn.Close()
-
-	remoteAdd := conn.RemoteAddr()
-	localAdd := conn.LocalAddr()
-	fmt.Printf("The remote address in the server is : %s\n", remoteAdd)
-	fmt.Printf("The local address in the server is: %s\n", localAdd)
 
 	message := make([]byte, 1024)
 
@@ -51,6 +44,6 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Printf("Message Recieved: %s", message)
+	fmt.Printf("I am server Message Recieved: %s", message)
 
 }
