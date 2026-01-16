@@ -7,6 +7,7 @@ import (
 )
 
 func StartLoadBalancer(port string, serverPorts []string) {
+
 	// Setting up Load Balancer
 	loadBalancerListener, err := net.Listen("tcp", ":"+port)
 
@@ -17,7 +18,10 @@ func StartLoadBalancer(port string, serverPorts []string) {
 	defer loadBalancerListener.Close()
 	fmt.Println("Load Balancer running on port:" + port)
 
-	i := 0
+	// number that dictates which server is handling the request
+	// increments each new connection made
+	// new increment means different server to connect to
+	serverTrackerNum := 0
 	for {
 
 		conn, err := loadBalancerListener.Accept()
@@ -26,12 +30,14 @@ func StartLoadBalancer(port string, serverPorts []string) {
 			continue
 		}
 
-		go HandleConnection(conn, serverPorts[i])
+		go HandleConnection(conn, serverPorts[serverTrackerNum])
 
-		if i == 2 {
-			i = 0
+		// we reached the final server
+		// reset to the first
+		if serverTrackerNum == 2 {
+			serverTrackerNum = 0
 		}
-		i++
+		serverTrackerNum++
 	}
 }
 
@@ -48,10 +54,11 @@ func HandleConnection(clientConn net.Conn, serverPort string) {
 		return
 	}
 
-	fmt.Println("Load Balancer recieved Client Message")
+	fmt.Println("Load Balancer recieved a Client message")
 
 	serverConn, err := net.Dial("tcp", ":"+serverPort)
-	fmt.Println("LoadBalancer attempting to contact " + serverPort)
+	fmt.Println("LoadBalancer attempting to contact server :" + serverPort)
+
 	if err != nil {
 		fmt.Printf("Error Connecting: %s ", err)
 	}

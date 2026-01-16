@@ -44,6 +44,6 @@ func HandleConnection(conn net.Conn) {
 		return
 	}
 
-	fmt.Printf("I am server Message Recieved: %s", message)
+	fmt.Printf("Message Content is: %s \n", message)
 
 }
