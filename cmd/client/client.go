@@ -14,7 +14,7 @@ func main() {
 	// write the message we want to deliver
 	message := "hello my name is Amir"
 
-	// connect with the LB
+	// connect to the LB
 	conn, err := net.Dial("tcp", ":"+argPortClient)
 
 	// check if the connection is correct
@@ -24,11 +24,6 @@ func main() {
 	}
 
 	defer conn.Close()
-	remoteAdd := conn.RemoteAddr()
-	localAdd := conn.LocalAddr()
-
-	fmt.Printf("The remote address in the client is : %s\n", remoteAdd)
-	fmt.Printf("The local address in the client is: %s\n", localAdd)
 
 	// write into the connection
 	conn.Write([]byte(message))
