@@ -1,10 +1,17 @@
-package server
+package main
 
 import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 )
+
+func main() {
+	serverPort := os.Args[1]
+
+	StartServer(serverPort)
+}
 
 func StartServer(port string) {
 

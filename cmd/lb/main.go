@@ -29,7 +29,6 @@ func StartLoadBalancer(port string, serverPorts []string) {
 	// new increment means different server to connect to
 	serverTrackerNum := 0
 	for {
-
 		conn, err := loadBalancerListener.Accept()
 		if err != nil {
 			fmt.Printf("Error Accepting: %s", err)
@@ -48,6 +47,7 @@ func StartLoadBalancer(port string, serverPorts []string) {
 }
 
 func HandleConnection(clientConn net.Conn, serverPort string) {
+
 	// always close the connection at the end
 	defer clientConn.Close()
 
