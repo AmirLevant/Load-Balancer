@@ -42,15 +42,18 @@ func HandleConnection(conn net.Conn) {
 	// always close the connection at the end
 	defer conn.Close()
 
-	message := make([]byte, 1024)
+	message := make([]byte, 1)
 
-	_, err := conn.Read(message)
+	for {
 
-	if err != nil && err != io.EOF {
-		fmt.Println("Error reading:", err)
-		return
+		_, err := conn.Read(message)
+
+		if err != nil && err != io.EOF {
+			fmt.Println("Error reading:", err)
+			return
+		}
+
+		fmt.Printf("Message Content is: %s \n", message)
 	}
-
-	fmt.Printf("Message Content is: %s \n", message)
 
 }

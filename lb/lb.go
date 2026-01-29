@@ -8,7 +8,7 @@ import (
 
 func StartLoadBalancer(port string, serverPorts []string) {
 
-	// Setting up Load Balancer
+	// Set up Load Balancer
 	loadBalancerListener, err := net.Listen("tcp", ":"+port)
 
 	if err != nil {
@@ -18,9 +18,10 @@ func StartLoadBalancer(port string, serverPorts []string) {
 	defer loadBalancerListener.Close()
 	fmt.Println("Load Balancer running on port:" + port)
 
-	// number that dictates which server is handling the request
-	// increments each new connection made
-	// new increment means different server to connect to
+	// number dictating which server handles the request
+	// increments with new connection made
+	// increment means rotates server lb connects to
+
 	serverTrackerNum := 0
 	for {
 		conn, err := loadBalancerListener.Accept()
@@ -28,6 +29,8 @@ func StartLoadBalancer(port string, serverPorts []string) {
 			fmt.Printf("Error Accepting: %s", err)
 			continue
 		}
+
+		fmt.Println("Load Balancer recieved a Client message")
 
 		go HandleConnection(conn, serverPorts[serverTrackerNum])
 
@@ -45,26 +48,31 @@ func HandleConnection(clientConn net.Conn, serverPort string) {
 	// always close the connection at the end
 	defer clientConn.Close()
 
-	RxBuffer := make([]byte, 1024)
-
-	_, err := clientConn.Read(RxBuffer)
-
-	if err != nil {
-		log.Printf("Connection error: %v", err)
-		return
-	}
-
-	fmt.Println("Load Balancer recieved a Client message")
-
 	serverConn, err := net.Dial("tcp", ":"+serverPort)
 	fmt.Println("LoadBalancer attempting to contact server :" + serverPort)
 
 	if err != nil {
 		fmt.Printf("Error Connecting: %s ", err)
 	}
-
 	defer serverConn.Close()
 
-	serverConn.Write(RxBuffer)
+	RxBuffer := make([]byte, 1)
+
+	for {
+
+		_, err := clientConn.Read(RxBuffer)
+
+		if err != nil {
+			log.Printf("Connection error: %v", err)
+			return
+		}
+
+		serverConn.Write(RxBuffer)
+
+		if string(RxBuffer) == "f" {
+			fmt.Printf("End of Client transmision")
+			break
+		}
+	}
 
 }
