@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -42,18 +43,25 @@ func HandleConnection(conn net.Conn) {
 	// always close the connection at the end
 	defer conn.Close()
 
-	message := make([]byte, 1)
+	// len of data at the start of the buffer, 4 bytes
+	Rxbuffer := make([]byte, 4)
+	Txbuffer := make([]byte, 4)
 
-	for {
+	for i := 0; i < 10; i++ {
 
-		_, err := conn.Read(message)
-
+		// read the message
+		_, err := conn.Read(Rxbuffer)
 		if err != nil && err != io.EOF {
 			fmt.Println("Error reading:", err)
 			return
 		}
+		msg := binary.LittleEndian.Uint32(Rxbuffer)
+		fmt.Printf("Message Content is: %d \n", msg)
 
-		fmt.Printf("Message Content is: %s \n", message)
+		// write back
+		msg = msg + 3
+		binary.LittleEndian.PutUint32(Txbuffer, msg)
+		conn.Write(Txbuffer)
 	}
 
 }

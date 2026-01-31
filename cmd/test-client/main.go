@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"time"
 )
 
 func main() {
@@ -12,16 +13,16 @@ func main() {
 	lbPort := "8080"
 
 	// write the message we want to deliver
-	message := 2
+	var data uint32 = 7
 
-	StartClient(message, lbPort)
+	StartClient(data, lbPort)
 
 }
 
-func StartClient(message int, lbPort string) {
+func StartClient(data uint32, lbPort string) {
 
 	// connect to the LB
-	conn, err := net.Dial("tcp", ":"+lbPort)
+	lbConn, err := net.Dial("tcp", ":"+lbPort)
 
 	// check if the connection is correct
 	if err != nil {
@@ -31,21 +32,33 @@ func StartClient(message int, lbPort string) {
 
 	fmt.Println("connected to lb")
 
-	defer conn.Close()
-	tempMessage := make([]byte, 1)
+	defer lbConn.Close()
 
-	for i := 0; i < 30; i++ {
+	Txbuffer := make([]byte, 4)
+	Rxbuffer := make([]byte, 4)
 
-		message = message + 3
+	for i := 0; i < 10; i++ {
 
-		// convert int to message
-		binary.LittleEndian.PutUint32(tempMessage, uint32(message))
+		// convert our data to bytes
+		binary.LittleEndian.PutUint32(Txbuffer, data)
 
 		// write into the connection
-		conn.Write(tempMessage)
+		lbConn.Write(Txbuffer)
 	}
-	finalMessage := make([]byte, 4)
-	finalMessage = []byte("f")
-	conn.Write(finalMessage)
+
+	for {
+		lbConn.SetReadDeadline(time.Now().Add(time.Second))
+
+		_, err = lbConn.Read(Rxbuffer)
+		if err != nil {
+			fmt.Println("Error connecting:", err)
+			return
+		}
+
+		msg := binary.LittleEndian.Uint32(Rxbuffer)
+
+		fmt.Printf("The msg from the server is: %d \n ", msg)
+
+	}
 
 }

@@ -16,6 +16,7 @@ func StartLoadBalancer(port string, serverPorts []string) {
 	}
 
 	defer loadBalancerListener.Close()
+
 	fmt.Println("Load Balancer running on port:" + port)
 
 	// number dictating which server handles the request
@@ -34,8 +35,7 @@ func StartLoadBalancer(port string, serverPorts []string) {
 
 		go HandleConnection(conn, serverPorts[serverTrackerNum])
 
-		// we reached the final server
-		// reset to the first
+		// reset the server cycle
 		if serverTrackerNum == 2 {
 			serverTrackerNum = 0
 		}
@@ -45,9 +45,10 @@ func StartLoadBalancer(port string, serverPorts []string) {
 
 func HandleConnection(clientConn net.Conn, serverPort string) {
 
-	// always close the connection at the end
+	// close the connection at the end
 	defer clientConn.Close()
 
+	// connect to server
 	serverConn, err := net.Dial("tcp", ":"+serverPort)
 	fmt.Println("LoadBalancer attempting to contact server :" + serverPort)
 
@@ -56,23 +57,29 @@ func HandleConnection(clientConn net.Conn, serverPort string) {
 	}
 	defer serverConn.Close()
 
-	RxBuffer := make([]byte, 1)
+	TxBuffer := make([]byte, 4)
+	RxBuffer := make([]byte, 4)
 
 	for {
 
-		_, err := clientConn.Read(RxBuffer)
+		_, err := clientConn.Read(TxBuffer)
 
 		if err != nil {
 			log.Printf("Connection error: %v", err)
 			return
 		}
 
-		serverConn.Write(RxBuffer)
+		serverConn.Write(TxBuffer)
 
-		if string(RxBuffer) == "f" {
-			fmt.Printf("End of Client transmision")
-			break
+		_, err = serverConn.Read(RxBuffer)
+
+		if err != nil {
+			log.Printf("error reading from server conn : %v", err)
+			return
 		}
+
+		clientConn.Write(RxBuffer)
+
 	}
 
 }
