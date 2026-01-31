@@ -3,62 +3,48 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"net"
-	"time"
 )
 
 func main() {
-
-	// the LB port to connect to
-	lbPort := "8080"
-
-	// write the message we want to deliver
-	var data uint32 = 7
-
-	StartClient(data, lbPort)
+	const lbPort = "8080"
+	startClient(7, lbPort)
 
 }
 
-func StartClient(data uint32, lbPort string) {
-
-	// connect to the LB
+func startClient(data uint32, lbPort string) error {
 	lbConn, err := net.Dial("tcp", ":"+lbPort)
-
-	// check if the connection is correct
 	if err != nil {
-		fmt.Println("Error connecting:", err)
-		return
+		return err
 	}
-
-	fmt.Println("connected to lb")
-
 	defer lbConn.Close()
 
-	Txbuffer := make([]byte, 4)
-	Rxbuffer := make([]byte, 4)
+	slog.Info("Connected", slog.Any("address", lbConn.RemoteAddr()))
 
-	for i := 0; i < 10; i++ {
+	txbuffer := make([]byte, 4)
+	rxbuffer := make([]byte, 4)
 
-		// convert our data to bytes
-		binary.LittleEndian.PutUint32(Txbuffer, data)
+	// Write the number 10 times to the lb
+	for range 10 {
+		// Serialise the number we want to send into bytes,
+		// and send it over the connection
+		binary.LittleEndian.PutUint32(txbuffer, data)
 
-		// write into the connection
-		lbConn.Write(Txbuffer)
+		_, err := lbConn.Write(txbuffer)
+		if err != nil {
+			return err
+		}
 	}
 
+	// Indefinitely read from the lb
 	for {
-		lbConn.SetReadDeadline(time.Now().Add(time.Second))
-
-		_, err = lbConn.Read(Rxbuffer)
+		_, err = lbConn.Read(rxbuffer)
 		if err != nil {
-			fmt.Println("Error connecting:", err)
-			return
+			return err
 		}
 
-		msg := binary.LittleEndian.Uint32(Rxbuffer)
-
+		msg := binary.LittleEndian.Uint32(rxbuffer)
 		fmt.Printf("The msg from the server is: %d \n ", msg)
-
 	}
-
 }
