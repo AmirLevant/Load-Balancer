@@ -69,7 +69,10 @@ func handleConnection(clientConn net.Conn, serverPort string) {
 				logger.Error("Failed reading from client", slog.Any("error", err))
 				return
 			}
-			serverConn.Write(txBuffer[:n])
+			_, err = serverConn.Write(txBuffer[:n])
+			if err != nil {
+				logger.Error("Failed writing to server", slog.Any("error", err))
+			}
 		}
 	}()
 
@@ -81,7 +84,10 @@ func handleConnection(clientConn net.Conn, serverPort string) {
 				logger.Error("Failed reading from server", slog.Any("error", err))
 				return
 			}
-			clientConn.Write(rxBuffer[:n])
+			_, err = clientConn.Write(rxBuffer[:n])
+			if err != nil {
+				logger.Error("Failed writing to client", slog.Any("error", err))
+			}
 		}
 	}()
 
