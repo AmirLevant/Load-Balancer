@@ -1,6 +1,7 @@
 package lb
 
 import (
+	"io"
 	"log/slog"
 	"net"
 )
@@ -24,7 +25,7 @@ func StartLoadBalancer(port string, serverPorts []string) error {
 		conn, err := listener.Accept()
 		if err != nil {
 			// TODO What happens if the TCP socket is closed for good?
-			// TODO Identify an intended close vs. an unintended close
+			// handle different errs, which ones do we break with?
 			slog.Error("Failed accepting listener", slog.Any("error", err))
 			continue
 		}
@@ -57,15 +58,13 @@ func handleConnection(clientConn net.Conn, serverPort string) {
 	txBuffer := make([]byte, 1024)
 	rxBuffer := make([]byte, 1024)
 
-	// TODO You need to handle errors writing to the server/client
-	// TODO What happens if no data is read?
-	// TODO Can reading/writing happen in parallel?
+	// TODO what happens if one of the goroutines fail
 
 	go func() {
 		for {
 			// Client -> Server
 			n, err := clientConn.Read(txBuffer)
-			if err != nil {
+			if err != nil && err != io.EOF {
 				logger.Error("Failed reading from client", slog.Any("error", err))
 				return
 			}
@@ -80,7 +79,7 @@ func handleConnection(clientConn net.Conn, serverPort string) {
 		for {
 			// Server -> Client
 			n, err := serverConn.Read(rxBuffer)
-			if err != nil {
+			if err != nil && err != io.EOF {
 				logger.Error("Failed reading from server", slog.Any("error", err))
 				return
 			}

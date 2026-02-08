@@ -9,7 +9,7 @@ import (
 
 func main() {
 	const lbPort = "8080"
-	startClient(7, lbPort)
+	startClient(4, lbPort)
 
 }
 
