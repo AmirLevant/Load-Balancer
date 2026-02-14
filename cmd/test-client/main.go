@@ -5,18 +5,34 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"time"
+
+	"github.com/BurntSushi/toml"
 )
 
+type clientConfig struct {
+	Lb_address string `toml:"lb_address"`
+}
+
 func main() {
-	const lbPort = "8080"
-	startClient(4, lbPort)
+
+	time.Sleep(3 * time.Second)
+	var cfg clientConfig
+
+	if _, err := toml.DecodeFile("client.toml", &cfg); err != nil {
+		slog.Error("failed to decode client toml", slog.Any("error", err))
+	}
+	err := startClient(4, cfg.Lb_address)
+	if err != nil {
+		slog.Error("Failed starting client", slog.Any("error", err))
+	}
 
 }
 
-func startClient(data uint32, lbPort string) error {
-	lbConn, err := net.Dial("tcp", ":"+lbPort)
+func startClient(data uint32, lbAddress string) error {
+	lbConn, err := net.Dial("tcp", lbAddress) // This should be "lb:8080"
 	if err != nil {
-		return err
+		slog.Error("Failed dialing lb", slog.Any("error", err))
 	}
 	defer lbConn.Close()
 
@@ -33,18 +49,19 @@ func startClient(data uint32, lbPort string) error {
 
 		_, err := lbConn.Write(txbuffer)
 		if err != nil {
-			return err
+			return fmt.Errorf("writing to lb: %w", err)
 		}
 	}
 
-	// Indefinitely read from the lb
-	for {
+	// read from the lb
+	for range 10 {
 		_, err = lbConn.Read(rxbuffer)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading from lb: %w", err)
 		}
 
 		msg := binary.LittleEndian.Uint32(rxbuffer)
 		fmt.Printf("The msg from the server is: %d \n ", msg)
 	}
+	return nil
 }
