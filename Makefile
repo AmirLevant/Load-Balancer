@@ -6,18 +6,3 @@ build:
 clean:
 	rm -rf ./bin
 
-run-lb: build
-	./bin/lb
-
-run-test-client: build
-	./bin/test-client
-
-run-test-server-1: build
-	./bin/test-server 9090
-
-run-test-server-2: build
-	./bin/test-server 9091
-
-run-test-server-3: build
-	./bin/test-server 9092
-

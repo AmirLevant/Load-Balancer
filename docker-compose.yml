@@ -1,0 +1,54 @@
+version: "4.4"
+
+services:
+  lb:
+    container_name: lb
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: ./example/lb.toml
+        target: /app/lb.toml
+
+  server-1:
+    container_name: server-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/bin/test-server
+    volumes:
+      - type: bind
+        source: ./example/server-1.toml
+        target: /app/server.toml
+  server-2:
+    container_name: server-2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/bin/test-server
+    volumes:
+      - type: bind
+        source: ./example/server-2.toml
+        target: /app/server.toml
+  server-3:
+    container_name: server-3
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/bin/test-server
+    volumes:
+      - type: bind
+        source: ./example/server-3.toml
+        target: /app/server.toml
+
+  client:
+    container_name: client
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/bin/test-client
+    volumes:
+      - type: bind
+        source: ./example/client.toml
+        target: /app/client.toml
