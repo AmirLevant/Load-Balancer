@@ -16,7 +16,7 @@ type clientConfig struct {
 
 func main() {
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 	var cfg clientConfig
 
 	if _, err := toml.DecodeFile("client.toml", &cfg); err != nil {
@@ -30,11 +30,20 @@ func main() {
 }
 
 func startClient(data uint32, lbAddress string) error {
-	lbConn, err := net.Dial("tcp", lbAddress) // This should be "lb:8080"
+	lbConn, err := net.Dial("tcp", lbAddress)
 	if err != nil {
 		slog.Error("Failed dialing lb", slog.Any("error", err))
+		return err
 	}
-	defer lbConn.Close()
+	defer func() {
+		fmt.Println("Closing connection")
+		err := lbConn.Close()
+		if err != nil {
+			fmt.Println("Failed closing connection:", err)
+		} else {
+			fmt.Println("Connection closed")
+		}
+	}()
 
 	slog.Info("Connected", slog.Any("address", lbConn.RemoteAddr()))
 

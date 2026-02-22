@@ -1,7 +1,7 @@
-version: "4.4"
-
 services:
   lb:
+    ports:
+      - "8080:8080"
     container_name: lb
     build:
       context: .
