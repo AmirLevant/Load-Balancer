@@ -2,10 +2,19 @@ package main
 
 import (
 	"lb/lb"
+	"log/slog"
+
+	"github.com/BurntSushi/toml"
 )
 
 func main() {
-	var lbPort string = "8080"
-	var serverPorts = []string{"9090", "9091", "9092"}
-	lb.StartLoadBalancer(lbPort, serverPorts)
+	var cfg lb.LbConfig
+	if _, err := toml.DecodeFile("/app/lb.toml", &cfg); err != nil {
+		slog.Error("failed to decode lb toml", slog.Any("error", err))
+		return
+	}
+	if err := lb.StartLoadBalancer(cfg); err != nil {
+		slog.Error("failed to run lb", slog.Any("error", err))
+		return
+	}
 }

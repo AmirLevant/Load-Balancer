@@ -2,69 +2,82 @@ package lb
 
 import (
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"net"
+
+	"golang.org/x/sync/errgroup"
 )
 
-func StartLoadBalancer(port string, serverPorts []string) {
+type LbConfig struct {
+	LbPort  string   `toml:"lb_port"`
+	Servers []string `toml:"servers"`
+}
 
-	// Setting up Load Balancer
-	loadBalancerListener, err := net.Listen("tcp", ":"+port)
-
+func StartLoadBalancer(cfg LbConfig) error {
+	// Sets up a socket for lb to listen on,
+	// for incoming connections
+	address := ":" + cfg.LbPort
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		fmt.Printf("Error listening: %s", err)
+		return err
 	}
+	defer listener.Close()
+	slog.Info("Running lb")
 
-	defer loadBalancerListener.Close()
-	fmt.Println("Load Balancer running on port:" + port)
+	slog.Info("Listening", slog.String("address", address))
 
-	// number that dictates which server is handling the request
-	// increments each new connection made
-	// new increment means different server to connect to
-	serverTrackerNum := 0
+	// Counts the number of total connections,
+	// used for round robin load balancing
+	robin := 0
 	for {
-		conn, err := loadBalancerListener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Printf("Error Accepting: %s", err)
+			// TODO What happens if the TCP socket is closed for good?
+			// handle different errs, which ones do we break with?
+			slog.Error("failed accepting listener", slog.Any("error", err))
 			continue
 		}
-
-		go HandleConnection(conn, serverPorts[serverTrackerNum])
-
-		// we reached the final server
-		// reset to the first
-		if serverTrackerNum == 2 {
-			serverTrackerNum = 0
-		}
-		serverTrackerNum++
+		slog.Info("Accepted connection", slog.Any("address", conn.RemoteAddr()))
+		go handleConnection(conn, cfg.Servers[robin%len(cfg.Servers)])
+		robin += 1
 	}
 }
 
-func HandleConnection(clientConn net.Conn, serverPort string) {
-
-	// always close the connection at the end
+func handleConnection(clientConn net.Conn, serverAddress string) {
+	// Ensure the client connection is closed even if
+	// the function exits early, e.g. if we fail to
+	// connect to the server
 	defer clientConn.Close()
 
-	RxBuffer := make([]byte, 1024)
-
-	_, err := clientConn.Read(RxBuffer)
-
+	// Connect to the server
+	serverConn, err := net.Dial("tcp", serverAddress)
 	if err != nil {
-		log.Printf("Connection error: %v", err)
+		slog.Error("Failed to connect to server", slog.Any("error", err))
 		return
 	}
-
-	fmt.Println("Load Balancer recieved a Client message")
-
-	serverConn, err := net.Dial("tcp", ":"+serverPort)
-	fmt.Println("LoadBalancer attempting to contact server :" + serverPort)
-
-	if err != nil {
-		fmt.Printf("Error Connecting: %s ", err)
-	}
-
 	defer serverConn.Close()
 
-	serverConn.Write(RxBuffer)
+	logger := slog.With(
+		slog.Any("client_address", clientConn.RemoteAddr()),
+		slog.Any("server_address", serverConn.RemoteAddr()))
 
+	var g errgroup.Group
+	g.Go(func() error {
+		_, err := io.Copy(clientConn, serverConn)
+		if err != nil {
+			return fmt.Errorf("proxy client to server: %w", err)
+		}
+		return nil
+	})
+	g.Go(func() error {
+		_, err := io.Copy(serverConn, clientConn)
+		if err != nil {
+			return fmt.Errorf("proxy server to client: %w", err)
+		}
+		return nil
+	})
+	if err := g.Wait(); err != nil {
+		logger.Error("Failed proxying", slog.Any("error", err))
+	}
 }

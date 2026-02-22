@@ -1,21 +1,34 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
-	"os"
+
+	"github.com/BurntSushi/toml"
 )
 
-func main() {
-	serverPort := os.Args[1]
+type serverConfig struct {
+	Server_port string `toml:"server_port"`
+}
 
-	StartServer(serverPort)
+func main() {
+
+	var cfg serverConfig
+
+	if _, err := toml.DecodeFile("server.toml", &cfg); err != nil {
+		slog.Error("failed to decode server toml", slog.Any("error", err))
+		return
+	}
+
+	StartServer(cfg.Server_port)
 }
 
 func StartServer(port string) {
 
-	// we listen on port 8080
+	// we listen on server port
 	listener, err := net.Listen("tcp", ":"+port)
 
 	if err != nil {
@@ -33,24 +46,46 @@ func StartServer(port string) {
 			fmt.Println("Error Accepting:", err)
 			continue
 		}
-		fmt.Println("server " + port + " has recieved a message")
-		go HandleConnection(conn)
+		fmt.Println("server " + port + " has recieved a connection")
+		go handleConnection(conn)
 	}
 }
 
-func HandleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn) {
 	// always close the connection at the end
-	defer conn.Close()
+	defer func() {
+		fmt.Println("Closing connection")
+		err := conn.Close()
+		if err != nil {
+			fmt.Println("Failed closing connection:", err)
+		} else {
+			fmt.Println("Connection closed")
+		}
+	}()
 
-	message := make([]byte, 1024)
+	// len of data at the start of the buffer, 4 bytes
+	Rxbuffer := make([]byte, 4)
+	Txbuffer := make([]byte, 4)
 
-	_, err := conn.Read(message)
+	for i := 0; i < 10; i++ {
 
-	if err != nil && err != io.EOF {
-		fmt.Println("Error reading:", err)
-		return
+		// read the message
+		_, err := conn.Read(Rxbuffer)
+		if err != nil && err != io.EOF {
+			fmt.Println("Error reading:", err)
+			return
+		}
+		msg := binary.LittleEndian.Uint32(Rxbuffer)
+		fmt.Printf("Message Content is: %d \n", msg)
+
+		// write back
+		msg = msg + 3
+		binary.LittleEndian.PutUint32(Txbuffer, msg)
+		_, err = conn.Write(Txbuffer)
+		if err != nil {
+			fmt.Println("Error writing:", err)
+		}
+
 	}
-
-	fmt.Printf("Message Content is: %s \n", message)
 
 }
