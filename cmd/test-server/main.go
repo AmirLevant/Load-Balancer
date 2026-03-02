@@ -80,16 +80,17 @@ func handleConnection(conn net.Conn) error {
 			return fmt.Errorf("Error reading: %w", err)
 		}
 		msg := binary.LittleEndian.Uint32(rxBuffer)
-		slog.Info("Message Content is: %d \n", msg)
+		slog.Info("Message Content is: %d \n", slog.Any("info", msg))
 
 		// Write back
 		msg = msg + 3
 		binary.LittleEndian.PutUint32(txBuffer, msg)
 		_, err = conn.Write(txBuffer)
 		if err != nil {
-			slog.Info("Error writing:", err)
+			return fmt.Errorf("Error writing: %w", err)
 		}
 
 	}
+	return nil
 
 }
