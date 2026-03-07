@@ -1,4 +1,10 @@
 FROM golang:1.25.6
 
-WORKDIR ./lb
+WORKDIR /app
 
+COPY . .
+
+RUN make build . 
+
+
+CMD [ "/app/bin/lb"]

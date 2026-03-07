@@ -1,56 +1,93 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
+
+	"github.com/BurntSushi/toml"
 )
 
-func main() {
-	serverPort := os.Args[1]
-
-	StartServer(serverPort)
+type serverConfig struct {
+	ServerPort string `toml:"server_port"`
 }
 
-func StartServer(port string) {
-
-	// we listen on port 8080
-	listener, err := net.Listen("tcp", ":"+port)
-
-	if err != nil {
-		fmt.Println("Error listening:", err)
-		return
+func main() {
+	var cfg serverConfig
+	if _, err := toml.DecodeFile("server.toml", &cfg); err != nil {
+		slog.Error("failed to decode server toml", slog.Any("error", err))
+		os.Exit(1)
 	}
 
+	err := StartServer(cfg.ServerPort)
+	if err != nil {
+		slog.Error("failed starting client", slog.Any("error", err))
+		os.Exit(1)
+	}
+}
+
+func StartServer(port string) error {
+	// Listen on server port
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return fmt.Errorf("failed listening: %w", err)
+	}
 	defer listener.Close()
 
-	fmt.Println("Server running on port :" + port)
+	slog.Info("Server running on port :" + port)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error Accepting:", err)
+			slog.Error("error Accepting:", slog.Any("error", err))
 			continue
 		}
-		fmt.Println("server " + port + " has recieved a message")
-		go HandleConnection(conn)
+		slog.Info("server " + port + " has recieved a connection")
+		go func() {
+			if err := handleConnection(conn); err != nil {
+				slog.Error("failed handling connection", slog.Any("error", err))
+			}
+		}()
 	}
 }
 
-func HandleConnection(conn net.Conn) {
-	// always close the connection at the end
-	defer conn.Close()
+func handleConnection(conn net.Conn) error {
+	// Always close the connection at the end
+	defer func() {
+		slog.Info("Closing connection")
+		err := conn.Close()
+		if err != nil {
+			slog.Error("failed closing connection:", slog.Any("error", err))
+		} else {
+			slog.Info("Connection closed")
+		}
+	}()
 
-	message := make([]byte, 1024)
+	// Len of data at the start of the buffer, 4 bytes
+	rxBuffer := make([]byte, 4)
+	txBuffer := make([]byte, 4)
 
-	_, err := conn.Read(message)
+	for i := 0; i < 10; i++ {
+		// Read the message
+		_, err := conn.Read(rxBuffer)
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("error reading: %w", err)
+		}
+		msg := binary.LittleEndian.Uint32(rxBuffer)
+		slog.Info("Message from the client is: ", slog.Uint64("msg", uint64(msg)))
 
-	if err != nil && err != io.EOF {
-		fmt.Println("Error reading:", err)
-		return
+		// Write back
+		msg = msg + 3
+		binary.LittleEndian.PutUint32(txBuffer, msg)
+		_, err = conn.Write(txBuffer)
+		if err != nil {
+			return fmt.Errorf("error writing: %w", err)
+		}
+
 	}
-
-	fmt.Printf("Message Content is: %s \n", message)
+	return nil
 
 }
