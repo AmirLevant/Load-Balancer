@@ -20,13 +20,13 @@ func main() {
 	flag.Parse()
 	var cfg clientConfig
 	if _, err := toml.DecodeFile(*path, &cfg); err != nil {
-		slog.Error("Failed to decode client toml", slog.Any("error", err))
+		slog.Error("failed to decode client toml", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	err := startClient(6, cfg.LbAddress)
 	if err != nil {
-		slog.Error("Failed starting client", slog.Any("error", err))
+		slog.Error("failed starting client", slog.Any("error", err))
 		os.Exit(1)
 	}
 
@@ -41,7 +41,7 @@ func startClient(data uint32, lbAddress string) error {
 		slog.Info("Closing connection")
 		err := lbConn.Close()
 		if err != nil {
-			slog.Error("Failed closing connection:", slog.Any("error", err))
+			slog.Error("failed closing connection:", slog.Any("error", err))
 		} else {
 			slog.Info("Connection closed")
 		}

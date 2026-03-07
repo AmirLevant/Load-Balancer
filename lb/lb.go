@@ -35,14 +35,14 @@ func StartLoadBalancer(cfg LbConfig) error {
 		if err != nil {
 			// TODO What happens if the TCP socket is closed for good?
 			// handle different errs, which ones do we break with?
-			slog.Error("Failed accepting listener", slog.Any("error", err))
+			slog.Error("failed accepting listener", slog.Any("error", err))
 			continue
 		}
 		slog.Info("Accepted connection", slog.Any("address", conn.RemoteAddr()))
 
 		go func() {
 			if err := handleConnection(conn, cfg.Servers[robin%len(cfg.Servers)]); err != nil {
-				slog.Error("Failed handling connection", slog.Any("error", err))
+				slog.Error("failed handling connection", slog.Any("error", err))
 			}
 		}()
 		robin += 1

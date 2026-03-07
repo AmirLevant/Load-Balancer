@@ -15,11 +15,11 @@ func main() {
 
 	var cfg lb.LbConfig
 	if _, err := toml.DecodeFile(*pathPtr, &cfg); err != nil {
-		slog.Error("Failed to decode lb toml", slog.Any("error", err))
+		slog.Error("failed to decode lb toml", slog.Any("error", err))
 		os.Exit(1)
 	}
 	if err := lb.StartLoadBalancer(cfg); err != nil {
-		slog.Error("Failed to run lb", slog.Any("error", err))
+		slog.Error("failed to run lb", slog.Any("error", err))
 		os.Exit(1)
 	}
 }

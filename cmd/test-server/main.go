@@ -18,13 +18,13 @@ type serverConfig struct {
 func main() {
 	var cfg serverConfig
 	if _, err := toml.DecodeFile("server.toml", &cfg); err != nil {
-		slog.Error("Failed to decode server toml", slog.Any("error", err))
+		slog.Error("failed to decode server toml", slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	err := StartServer(cfg.ServerPort)
 	if err != nil {
-		slog.Error("Failed starting client", slog.Any("error", err))
+		slog.Error("failed starting client", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
@@ -42,13 +42,13 @@ func StartServer(port string) error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			slog.Error("Error Accepting:", slog.Any("error", err))
+			slog.Error("error Accepting:", slog.Any("error", err))
 			continue
 		}
 		slog.Info("server " + port + " has recieved a connection")
 		go func() {
 			if err := handleConnection(conn); err != nil {
-				slog.Error("Failed handling connection", slog.Any("error", err))
+				slog.Error("failed handling connection", slog.Any("error", err))
 			}
 		}()
 	}
@@ -60,7 +60,7 @@ func handleConnection(conn net.Conn) error {
 		slog.Info("Closing connection")
 		err := conn.Close()
 		if err != nil {
-			slog.Error("Failed closing connection:", slog.Any("error", err))
+			slog.Error("failed closing connection:", slog.Any("error", err))
 		} else {
 			slog.Info("Connection closed")
 		}
@@ -74,7 +74,7 @@ func handleConnection(conn net.Conn) error {
 		// Read the message
 		_, err := conn.Read(rxBuffer)
 		if err != nil && err != io.EOF {
-			return fmt.Errorf("Error reading: %w", err)
+			return fmt.Errorf("error reading: %w", err)
 		}
 		msg := binary.LittleEndian.Uint32(rxBuffer)
 		slog.Info("Message from the client is: ", slog.Uint64("msg", uint64(msg)))
@@ -84,7 +84,7 @@ func handleConnection(conn net.Conn) error {
 		binary.LittleEndian.PutUint32(txBuffer, msg)
 		_, err = conn.Write(txBuffer)
 		if err != nil {
-			return fmt.Errorf("Error writing: %w", err)
+			return fmt.Errorf("error writing: %w", err)
 		}
 
 	}
