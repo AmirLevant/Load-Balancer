@@ -10,6 +10,15 @@ services:
       - type: bind
         source: ./example/lb.toml
         target: /app/lb.toml
+    depends_on:
+      server-1:
+        condition: service_started
+      server-2:
+        condition: service_started
+      server-3:
+        condition: service_started
+
+      
 
   server-1:
     container_name: server-1
@@ -52,3 +61,6 @@ services:
       - type: bind
         source: ./example/client.toml
         target: /app/client.toml
+    depends_on:
+      lb:
+        condition: service_started

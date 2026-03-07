@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -16,13 +16,10 @@ type clientConfig struct {
 }
 
 func main() {
-	//path := flag.String("config", "client.toml", "client config path")
-	//flag.Parse()
-
-	time.Sleep(2 * time.Second)
+	path := flag.String("config", "client.toml", "client config path")
+	flag.Parse()
 	var cfg clientConfig
-
-	if _, err := toml.DecodeFile("client.toml", &cfg); err != nil {
+	if _, err := toml.DecodeFile(*path, &cfg); err != nil {
 		slog.Error("Failed to decode client toml", slog.Any("error", err))
 		os.Exit(1)
 	}
@@ -35,13 +32,13 @@ func main() {
 
 }
 
-func startClient(data uint32, LbAddress string) error {
-	lbConn, err := net.Dial("tcp", LbAddress)
+func startClient(data uint32, lbAddress string) error {
+	lbConn, err := net.Dial("tcp", lbAddress)
 	if err != nil {
-		return fmt.Errorf("failed dialing lb: %w, %s", err, LbAddress)
+		return fmt.Errorf("failed dialing lb: %w, %s", err, lbAddress)
 	}
 	defer func() {
-		fmt.Println("Closing connection")
+		slog.Info("Closing connection")
 		err := lbConn.Close()
 		if err != nil {
 			slog.Error("Failed closing connection:", slog.Any("error", err))
@@ -73,7 +70,7 @@ func startClient(data uint32, LbAddress string) error {
 		}
 
 		msg := binary.LittleEndian.Uint32(rxBuffer)
-		fmt.Printf("The msg from the server is: %d \n ", msg)
+		slog.Info("Message from the server is: ", slog.Uint64("msg", uint64(msg)))
 	}
 	return nil
 }

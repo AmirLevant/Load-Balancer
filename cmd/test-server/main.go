@@ -19,7 +19,7 @@ func main() {
 	var cfg serverConfig
 	if _, err := toml.DecodeFile("server.toml", &cfg); err != nil {
 		slog.Error("Failed to decode server toml", slog.Any("error", err))
-		return
+		os.Exit(1)
 	}
 
 	err := StartServer(cfg.ServerPort)
@@ -30,14 +30,11 @@ func main() {
 }
 
 func StartServer(port string) error {
-
 	// Listen on server port
 	listener, err := net.Listen("tcp", ":"+port)
-
 	if err != nil {
-		return fmt.Errorf("Failed listening: %w", err)
+		return fmt.Errorf("failed listening: %w", err)
 	}
-
 	defer listener.Close()
 
 	slog.Info("Server running on port :" + port)
@@ -60,7 +57,7 @@ func StartServer(port string) error {
 func handleConnection(conn net.Conn) error {
 	// Always close the connection at the end
 	defer func() {
-		fmt.Println("Closing connection")
+		slog.Info("Closing connection")
 		err := conn.Close()
 		if err != nil {
 			slog.Error("Failed closing connection:", slog.Any("error", err))
@@ -80,7 +77,7 @@ func handleConnection(conn net.Conn) error {
 			return fmt.Errorf("Error reading: %w", err)
 		}
 		msg := binary.LittleEndian.Uint32(rxBuffer)
-		slog.Info("Message Content is: %d \n", slog.Any("info", msg))
+		slog.Info("Message from the client is: ", slog.Uint64("msg", uint64(msg)))
 
 		// Write back
 		msg = msg + 3
