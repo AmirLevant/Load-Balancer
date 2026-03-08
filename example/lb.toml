@@ -1,0 +1,6 @@
+lb_port = "8080"
+servers = [
+  "server-1:9090",
+  "server-2:9090",
+  "server-3:9090",
+]
